@@ -33,7 +33,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.FontDescription;
 import net.minecraft.network.chat.Style;
-import org.lwjgl.glfw.GLFW;
+import org.lwjgl.sdl.SDLVideo;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -141,11 +141,7 @@ public class InspectorWidget extends StatefulWidget {
                                                                         new Button(
                                                                             () -> this.setState(() -> {
                                                                                 this.alwaysOnTop = !this.alwaysOnTop;
-                                                                                GLFW.glfwSetWindowAttrib(
-                                                                                    this.widget().inspector.currentWindow.backendWindow.handle(),
-                                                                                    GLFW.GLFW_FLOATING,
-                                                                                    this.alwaysOnTop ? GLFW.GLFW_TRUE : GLFW.GLFW_FALSE
-                                                                                );
+                                                                                SDLVideo.SDL_SetWindowAlwaysOnTop(this.widget().inspector.currentWindow.backendWindow.handle(), this.alwaysOnTop);
                                                                             }),
                                                                             new SpriteWidget(
                                                                                 this.alwaysOnTop

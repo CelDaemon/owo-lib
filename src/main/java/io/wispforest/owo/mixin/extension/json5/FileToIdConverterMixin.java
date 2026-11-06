@@ -15,7 +15,6 @@ import org.spongepowered.asm.mixin.injection.At;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Predicate;
 
 import static io.wispforest.owo.util.DataExtensionUtil.OptInIdentifierPredicate;
 import static io.wispforest.owo.util.DataExtensionUtil.coerceJson;
@@ -29,19 +28,16 @@ public abstract class FileToIdConverterMixin {
         method = "listMatchingResources",
         at = @At(
             value = "INVOKE",
-            target = "Lnet/minecraft/server/packs/resources/ResourceManager;listResources(Ljava/lang/String;Ljava/util/function/Predicate;)Ljava/util/Map;"
+            target = "Lnet/minecraft/server/packs/resources/ResourceManager;listResources(Ljava/lang/String;Lnet/minecraft/server/packs/resources/ResourceManager$Selector;)Ljava/util/Map;"
         )
     )
     private Map<Identifier, Resource> json5$findResources(
-        ResourceManager instance,
-        String directoryName,
-        Predicate<Identifier> identifierPredicate,
-        Operation<Map<Identifier, Resource>> original
+            ResourceManager instance, String s, ResourceManager.Selector selector, Operation<Map<Identifier, Resource>> original
     ) {
-        var base = original.call(instance, directoryName, identifierPredicate);
+        var base = original.call(instance, s, selector);
         if (this.extension.equals(".json")) {
             original
-                .call(instance, directoryName, OptInIdentifierPredicate.of(path -> path.getPath().endsWith(".json5")))
+                .call(instance, s, (ResourceManager.Selector) path -> path.getPath().endsWith(".json5"))
                 .forEach((identifier, resource) -> base.put(
                     identifier,
                     new Resource(resource.source(), () -> coerceJson(resource.open()))
@@ -54,19 +50,16 @@ public abstract class FileToIdConverterMixin {
         method = "listMatchingResourceStacks",
         at = @At(
             value = "INVOKE",
-            target = "Lnet/minecraft/server/packs/resources/ResourceManager;listResourceStacks(Ljava/lang/String;Ljava/util/function/Predicate;)Ljava/util/Map;"
+            target = "Lnet/minecraft/server/packs/resources/ResourceManager;listResourceStacks(Ljava/lang/String;Lnet/minecraft/server/packs/resources/ResourceManager$Selector;)Ljava/util/Map;"
         )
     )
     private Map<Identifier, List<Resource>> json5$findAllResources(
-        ResourceManager instance,
-        String directoryName,
-        Predicate<Identifier> identifierPredicate,
-        Operation<Map<Identifier, List<Resource>>> original
+            ResourceManager instance, String s, ResourceManager.Selector selector, Operation<Map<Identifier, List<Resource>>> original
     ) {
-        var base = original.call(instance, directoryName, identifierPredicate);
+        var base = original.call(instance, s, selector);
         if (this.extension.equals(".json")) {
             original
-                .call(instance, directoryName, OptInIdentifierPredicate.of(path -> path.getPath().endsWith(".json5")))
+                .call(instance, s, (ResourceManager.Selector) path -> path.getPath().endsWith(".json5"))
                 .forEach((identifier, resources) -> base
                     .computeIfAbsent(identifier, id -> new ArrayList<>())
                     .addAll(resources

@@ -1,8 +1,9 @@
 package io.wispforest.owo.ui.renderstate;
 
 import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.textures.GpuTextureView;
 import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.renderpearl.api.textures.GpuTextureView;
+import io.wispforest.owo.mixin.PictureInPictureRendererAccessor;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.navigation.ScreenRectangle;
@@ -13,6 +14,8 @@ import net.minecraft.client.renderer.state.gui.GuiRenderState;
 import net.minecraft.client.renderer.state.gui.pip.PictureInPictureRenderState;
 import net.minecraft.util.Mth;
 import org.jetbrains.annotations.Nullable;
+import org.joml.Vector4f;
+import org.joml.Vector4fc;
 
 public record CubeMapElementRenderState(
     CubeMap cubeMap,
@@ -20,8 +23,7 @@ public record CubeMapElementRenderState(
     ScreenRectangle bounds,
     ScreenRectangle scissorArea
 ) implements PictureInPictureRenderState {
-
-    public static OutputOverride outputOverride = null;
+    public static final ScopedValue<OutputOverride> OUTPUT_OVERRIDE = ScopedValue.newInstance();
 
     @Override
     public int x0() {
@@ -59,8 +61,6 @@ public record CubeMapElementRenderState(
     }
 
     public static class Renderer extends PictureInPictureRenderer<CubeMapElementRenderState> {
-
-        private static GuiGraphicsExtractor dummyContext;
         private float spin;
 
         @Override
@@ -70,33 +70,24 @@ public record CubeMapElementRenderState(
 
         @Override
         protected void renderToTexture(CubeMapElementRenderState state, PoseStack matrices, SubmitNodeCollector collector) {
-            if (dummyContext == null) {
-                dummyContext = new GuiGraphicsExtractor(Minecraft.getInstance(), new GuiRenderState(), 0, 0);
+
+            final var accessor = (PictureInPictureRendererAccessor) this;
+
+            // TODO: we should probably investigate syncing this to the actual panorama
+            //  rotation at some point
+
+            Minecraft minecraft = Minecraft.getInstance();
+            if (state.rotate()) {
+                float a = minecraft.getDeltaTracker().getRealtimeDeltaTicks();
+                float delta = (float) (a * minecraft.gameRenderer.gameRenderState().optionsRenderState.panoramaSpeed);
+                this.spin = Mth.wrapDegrees(this.spin + delta * 0.1F);
             }
 
-            dummyContext.guiRenderState.reset();
-
-            try {
-                CubeMapElementRenderState.outputOverride = new OutputOverride(
-                    RenderSystem.outputColorTextureOverride,
-                    RenderSystem.outputDepthTextureOverride,
-                    0xFF000000
-                );
-
-                // TODO: we should probably investigate syncing this to the actual panorama
-                //  rotation at some point
-
-                Minecraft minecraft = Minecraft.getInstance();
-                if (state.rotate()) {
-                    float a = minecraft.getDeltaTracker().getRealtimeDeltaTicks();
-                    float delta = (float) (a * minecraft.gameRenderer.gameRenderState().optionsRenderState.panoramaSpeed);
-                    this.spin = Mth.wrapDegrees(this.spin + delta * 0.1F);
-                }
-
-                state.cubeMap.render(10.0F, this.spin);
-            } finally {
-                CubeMapElementRenderState.outputOverride = null;
-            }
+            ScopedValue.where(OUTPUT_OVERRIDE, new OutputOverride(
+                    accessor.getTextureView(),
+                    accessor.getDepthTextureView(),
+                    new Vector4f(1, 0, 0, 0)
+            )).run(() -> state.cubeMap.render(10.0F, this.spin));
         }
 
         @Override
@@ -105,5 +96,5 @@ public record CubeMapElementRenderState(
         }
     }
 
-    public record OutputOverride(GpuTextureView color, GpuTextureView depth, int resetColor) {}
+    public record OutputOverride(GpuTextureView color, GpuTextureView depth, Vector4fc resetColor) {}
 }

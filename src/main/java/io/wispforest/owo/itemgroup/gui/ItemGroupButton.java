@@ -1,5 +1,6 @@
 package io.wispforest.owo.itemgroup.gui;
 
+import com.mojang.blaze3d.Blaze3D;
 import io.wispforest.owo.Owo;
 import io.wispforest.owo.itemgroup.Icon;
 import io.wispforest.owo.itemgroup.OwoItemGroup;
@@ -9,6 +10,8 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Util;
 import net.minecraft.world.item.CreativeModeTab;
+
+import java.net.URI;
 
 /**
  * A button placed to the right side of the creative inventory. Provides defaults
@@ -59,13 +62,14 @@ public final class ItemGroupButton implements OwoItemGroup.ButtonDefinition {
      * @return The created button
      */
     public static ItemGroupButton link(CreativeModeTab group, Icon icon, String name, String url) {
+        final var uri = URI.create(url);
         return new ItemGroupButton(group, icon, name, () -> {
             final var client = Minecraft.getInstance();
             var screen = client.gui.screen();
             client.setScreenAndShow(new ConfirmLinkScreen(confirmed -> {
-                if (confirmed) Util.getPlatform().openUri(url);
+                if (confirmed) Blaze3D.openUri(uri);
                 client.setScreenAndShow(screen);
-            }, url, true));
+            }, uri, true));
         });
     }
 

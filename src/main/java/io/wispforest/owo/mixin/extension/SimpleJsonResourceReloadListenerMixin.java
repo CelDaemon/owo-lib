@@ -7,43 +7,46 @@ import com.google.gson.JsonPrimitive;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.llamalad7.mixinextras.sugar.Local;
+import com.mojang.serialization.Codec;
 import com.mojang.serialization.JsonOps;
 import io.wispforest.owo.Owo;
-import io.wispforest.owo.mixin.extension.recipe.RecipeManagerAccessor;
 import io.wispforest.owo.util.RecipeRemainderStorage;
 import net.minecraft.core.component.DataComponentPatch;
-import net.minecraft.resources.FileToIdConverter;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.SimpleJsonResourceReloadListener;
 import net.minecraft.util.GsonHelper;
 import net.minecraft.world.item.Item;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.ItemStackTemplate;
+import net.minecraft.world.item.crafting.Recipe;
+import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 
 import java.io.Reader;
 import java.util.HashMap;
 
 @Mixin(SimpleJsonResourceReloadListener.class)
-public abstract class SimpleJsonResourceReloadListenerMixin {
+public abstract class SimpleJsonResourceReloadListenerMixin<T> {
+    @Shadow
+    @Final
+    private Codec<T> codec;
 
     @WrapOperation(
-        method = "scanDirectory(Lnet/minecraft/server/packs/resources/ResourceManager;Lnet/minecraft/resources/FileToIdConverter;Lcom/mojang/serialization/DynamicOps;Lcom/mojang/serialization/Codec;Ljava/util/Map;)V",
+        method = "prepare(Lnet/minecraft/server/packs/resources/ResourceManager;Lnet/minecraft/util/profiling/ProfilerFiller;)Ljava/util/Map;",
         at = @At(
             value = "INVOKE",
             target = "Lnet/minecraft/util/StrictJsonParser;parse(Ljava/io/Reader;)Lcom/google/gson/JsonElement;"
         )
     )
-    private static JsonElement loadRecipeExtensions(
+    private JsonElement loadRecipeExtensions(
         Reader jsonReader,
         Operation<JsonElement> original,
-        @Local(argsOnly = true) FileToIdConverter finder,
         @Local(ordinal = 1) Identifier recipeId
     ) {
         var element = original.call(jsonReader);
 
-        if (RecipeManagerAccessor.owo$getFinder() == finder && element instanceof JsonObject json) {
+        if (codec.equals(Recipe.DIRECT_CODEC) && element instanceof JsonObject json) {
             if (json.has(Owo.id("remainders").toString())) {
                 var remainders = new HashMap<Item, ItemStackTemplate>();
 

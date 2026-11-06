@@ -1,6 +1,5 @@
 package io.wispforest.owo.braid.widgets.vanilla;
 
-import com.mojang.blaze3d.opengl.GlStateManager;
 import io.wispforest.owo.braid.core.BraidGraphics;
 import io.wispforest.owo.braid.core.Constraints;
 import io.wispforest.owo.braid.core.KeyModifiers;

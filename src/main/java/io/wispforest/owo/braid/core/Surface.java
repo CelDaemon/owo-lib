@@ -33,7 +33,7 @@ public interface Surface {
 
         public Default() {
             this.window = Minecraft.getInstance().getWindow();
-            this.cursorController = new CursorController(this.window.handle());
+            this.cursorController = new CursorController();
 
             if (resizeEvents == null) {
                 resizeEvents = ResizeCallback.newStream();

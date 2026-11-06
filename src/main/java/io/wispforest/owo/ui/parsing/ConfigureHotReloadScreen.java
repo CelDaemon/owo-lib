@@ -10,9 +10,10 @@ import io.wispforest.owo.ui.util.UISounds;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
-import net.minecraft.util.Util;
 import org.jetbrains.annotations.Nullable;
-import org.lwjgl.util.tinyfd.TinyFileDialogs;
+import org.lwjgl.sdl.SDLDialog;
+import org.lwjgl.sdl.SDLError;
+import org.lwjgl.system.MemoryUtil;
 
 import java.nio.file.Path;
 import java.util.concurrent.CompletableFuture;
@@ -34,6 +35,32 @@ public class ConfigureHotReloadScreen extends BaseUIModelScreen<FlowLayout> impl
         this.reloadLocation = UIModelLoader.getHotReloadPath(this.modelId);
     }
 
+    private CompletableFuture<@Nullable Path> openFileDialog() {
+        var future = new CompletableFuture<@Nullable Path>();
+        SDLDialog.SDL_ShowOpenFileDialog(
+                (_, filelist, _) -> {
+                    if (filelist == MemoryUtil.NULL) {
+                        future.completeExceptionally(new RuntimeException("Failed to open file dialog: " + SDLError.SDL_GetError()));
+                        return;
+                    }
+
+                    var pathAddress = MemoryUtil.memGetAddress(filelist);
+                    if (pathAddress == MemoryUtil.NULL) {
+                        future.complete(null);
+                        return;
+                    }
+
+                    future.complete(Path.of(MemoryUtil.memUTF8(pathAddress)));
+                },
+                0L,
+                0L,
+                null,
+                (CharSequence) null,
+                false
+        );
+        return future;
+    }
+
     @Override
     protected void build(FlowLayout rootComponent) {
         rootComponent.childById(LabelComponent.class, "ui-model-label").text(Component.translatable("text.owo.configure_hot_reload.model", this.modelId));
@@ -41,12 +68,16 @@ public class ConfigureHotReloadScreen extends BaseUIModelScreen<FlowLayout> impl
         this.updateFileNameLabel();
 
         rootComponent.childById(ButtonComponent.class, "choose-button").onPress(button -> {
-            CompletableFuture.runAsync(() -> {
-                var newPath = TinyFileDialogs.tinyfd_openFileDialog("Choose UI Model source", null, null, null, false);
-                if (newPath != null) this.reloadLocation = Path.of(newPath);
-            }, Util.backgroundExecutor()).whenComplete((unused, throwable) -> {
-                this.updateFileNameLabel();
-            });
+            openFileDialog()
+                .thenAccept(path -> {
+                    if (path != null) this.reloadLocation = path;
+                })
+                .whenComplete((_, e) -> {
+                    if (e != null)
+                        Owo.LOGGER.error("Failed to choose file", e);
+
+                    this.updateFileNameLabel();
+                });
         });
 
         rootComponent.childById(ButtonComponent.class, "save-button").onPress(button -> {
