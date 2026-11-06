@@ -70,6 +70,7 @@
     "braid.RenderSystemAccessor",
     "braid.ScreenMixin",
     "braid.ToastManagerMixin",
+    "braid.WindowMixin",
     "itemgroup.CreativeModeInventoryScreenAccessor",
     "itemgroup.CreativeModeInventoryScreenMixin",
     "itemgroup.EffectsInInventoryMixin",
