@@ -7,7 +7,7 @@ public enum CursorStyle {
      * The default cursor style defined by
      * the operating system
      */
-    NONE(0),
+    NONE(SDLMouse.SDL_SYSTEM_CURSOR_DEFAULT),
     /**
      * The default arrow-style pointing cursor
      */

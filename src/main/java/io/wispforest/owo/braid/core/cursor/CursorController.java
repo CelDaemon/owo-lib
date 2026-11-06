@@ -20,7 +20,7 @@ public class CursorController {
         if (this.disposed || this.lastCursorStyle == style) return;
 
         if (style == CursorStyle.NONE) {
-            SDLMouse.SDL_SetCursor(0);
+            SDLMouse.SDL_SetCursor(SDLMouse.SDL_GetDefaultCursor());
         } else {
             if (!this.cursors.containsKey(style)) {
                 this.cursors.put(style, style.allocate());
