@@ -8,7 +8,6 @@ import com.mojang.blaze3d.platform.Window;
 import com.mojang.blaze3d.platform.WindowEventHandler;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.renderpearl.api.GpuFormat;
-import com.mojang.renderpearl.api.device.BackendCreationException;
 import com.mojang.renderpearl.api.device.GpuSurface;
 import com.mojang.renderpearl.api.device.SurfaceException;
 import com.mojang.renderpearl.backend.opengl.GlTexture;
@@ -22,6 +21,8 @@ import io.wispforest.owo.mixin.braid.MinecraftAccessor;
 import io.wispforest.owo.mixin.braid.RenderSystemAccessor;
 import io.wispforest.owo.util.EventSource;
 import io.wispforest.owo.util.EventStream;
+import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
+import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import net.minecraft.client.Minecraft;
 import net.minecraft.util.Util;
 import org.jetbrains.annotations.ApiStatus;
@@ -39,6 +40,7 @@ import java.util.function.Supplier;
 //       for changes in the gui scale option so we can react
 //       instantly when it changes rather than on next resize
 public class BraidWindow implements Surface {
+    private static final Long2ObjectMap<Window> HANDLE_TO_WINDOW = new Long2ObjectOpenHashMap<>();
 
     public final EventBinding eventBinding = new WindowEventBinding(this);
 
@@ -67,6 +69,7 @@ public class BraidWindow implements Surface {
                     public void framebufferSizeChanged() {
                         withContext(Minecraft.getInstance().getWindow().handle(), () -> {
                             remoteTarget.destroyBuffers();
+                            Owo.LOGGER.info("New size: {}x{}", backendWindow.getWidth(), backendWindow.getHeight());
                             remoteTarget = new TextureTarget("braid window", backendWindow.getWidth(), backendWindow.getHeight(), GpuFormat.RGBA8_UNORM, GpuFormat.D32_FLOAT);
                         });
 
@@ -92,11 +95,11 @@ public class BraidWindow implements Surface {
                 title,
                 ((MinecraftAccessor) Minecraft.getInstance()).owo$getMonitorManager(), RenderSystemAccessor.getBACKEND());
 
-        SDLVideo.SDL_ShowWindow(this.backendWindow.handle());
+//        final var surface = device.createSurface(backendWindow.handle(), backendWindow::isIconified);
 
-        this.swapchain = IS_VULKAN.get()
-            ? new VulkanSwapchain()
-            : new GlSwapchain();
+//        SDLVideo.SDL_ShowWindow(this.backendWindow.handle());
+
+        this.swapchain = new VulkanSwapchain();
 
         this.cursorController = new CursorController();
         this.guiRenderer = new BraidGuiRenderer(Minecraft.getInstance());
@@ -157,6 +160,12 @@ public class BraidWindow implements Surface {
 //                this.eventBinding.add(new FilesDroppedEvent(paths));
 //            }
 //        })));
+
+        HANDLE_TO_WINDOW.put(this.backendWindow.handle(), this.backendWindow);
+    }
+
+    public static Window getWindow(long handle) {
+        return HANDLE_TO_WINDOW.get(handle);
     }
 
     private void resizeSwapchain() {
@@ -191,6 +200,7 @@ public class BraidWindow implements Surface {
 
     @Override
     public void dispose() {
+        HANDLE_TO_WINDOW.remove(this.backendWindow.handle());
         this.backendWindow.close();
         this.swapchain.dispose();
         this.cursorController.dispose();

@@ -69,6 +69,7 @@
     "braid.Matrix3x2fStackAccessor",
     "braid.RenderSystemAccessor",
     "braid.ScreenMixin",
+    "braid.SDLEventHandlerMixin",
     "braid.ToastManagerMixin",
     "braid.WindowMixin",
     "itemgroup.CreativeModeInventoryScreenAccessor",
